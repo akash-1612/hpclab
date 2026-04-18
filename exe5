@@ -1,0 +1,249 @@
+[23bcs098@mepcolinux exe6]$cat 1.c
+#include <stdio.h>
+#include <pthread.h>
+#define MAX 10
+int A[MAX][MAX], B[MAX][MAX];
+int add[MAX][MAX], mul[MAX][MAX];
+int n;
+
+void* matrix_addition(void* arg) {
+    int i, j;
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) {
+            add[i][j] = A[i][j] + B[i][j];
+        }
+    }
+    pthread_exit(NULL);
+}
+
+void* matrix_multiplication(void* arg) {
+    int i, j, k;
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) {
+            mul[i][j] = 0;
+            for (k = 0; k < n; k++) {
+                mul[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+    pthread_exit(NULL);
+}
+
+int main() {
+    pthread_t t1, t2;
+    int i, j;
+
+    printf("Enter matrix size: ");
+    scanf("%d", &n);
+
+    printf("\nEnter Matrix 1:\n");
+    for (i = 0; i < n; i++)
+        for (j = 0; j < n; j++)
+            scanf("%d", &A[i][j]);
+
+    printf("\nEnter Matrix 2:\n");
+    for (i = 0; i < n; i++)
+        for (j = 0; j < n; j++)
+            scanf("%d", &B[i][j]);
+
+
+    pthread_create(&t1, NULL, matrix_addition, NULL);
+    pthread_create(&t2, NULL, matrix_multiplication, NULL);
+
+
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+
+    printf("\nMatrix Addition:\n");
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++)
+            printf("%d ", add[i][j]);
+        printf("\n");
+    }
+
+    printf("\nMatrix Multiplication:\n");
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++)
+            printf("%d ", mul[i][j]);
+        printf("\n");
+    }
+
+    return 0;
+}
+student@gbl:~/23bcs098/exe5$ ./o1
+Enter matrix size: 5
+
+Enter Matrix 1:
+1
+2
+3
+4
+5
+6
+7
+8
+9
+9
+8
+7
+6
+6
+5
+5
+4
+3
+3
+2
+1
+4
+5
+6
+7
+
+Enter Matrix 2:
+9
+8
+7
+6
+5
+4
+3
+2
+1
+3
+4
+5
+6
+7
+8
+5
+3
+4
+5
+6
+7
+8
+3
+2
+4
+
+Matrix Addition:
+10 10 10 10 10
+10 10 10 10 12
+12 12 12 13 13
+10 7 7 8 8
+8 12 8 8 11
+
+Matrix Multiplication:
+84 81 60 59 79
+222 208 167 162 205
+189 173 145 137 165
+102 92 79 74 87
+124 119 90 89 121
+[23bcs098@mepcolinux exe6]$cat sum.c
+#include <stdio.h>
+#include <pthread.h>
+
+#define MAX 100
+int arr[MAX];
+int n;
+int sum = 0;
+pthread_mutex_t lock;
+
+typedef struct {
+    int start;
+    int end;
+    int local_sum;
+} Data;
+
+void *sum_part(void *arg) {
+    Data *d = (Data *)arg;
+    d->local_sum = 0;
+    for (int i = d->start; i < d->end; i++) {
+        d->local_sum += arr[i];
+    }
+
+    pthread_mutex_lock(&lock);
+    sum += d->local_sum;
+    pthread_mutex_unlock(&lock);
+    return NULL;
+}
+
+int main() {
+    pthread_t t1, t2;
+    printf("Enter number of elements (even): ");
+    scanf("%d", &n);
+    printf("Enter elements:\n");
+    for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
+    Data d1,d2;
+    pthread_mutex_init(&lock, NULL);
+    if(n%2==0)
+    {
+            Data d1 = {0, n/2, 0};
+            Data d2 = {n/2, n, 0};
+    }
+    else
+    {
+            Data d1={0,n/2,0};
+            Data d2={n/2,n,0};
+    }
+    pthread_create(&t1, NULL, sum_part, &d1);
+    pthread_create(&t2, NULL, sum_part, &d2);
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+
+    printf("Thread 1 Local Sum: %d\n", d1.local_sum);
+    printf("Thread 2 Local Sum: %d\n", d2.local_sum);
+
+    pthread_mutex_destroy(&lock);
+    printf("Total Sum = %d\n", sum);
+    return 0;
+}
+
+student@gbl:~/23bcs098/exe5$ ./sum
+Enter array size: 5
+Enter the array elements:
+1
+2
+3
+4
+5
+Thread 1 local_sum: 3
+Thread 2 local_sum: 12
+Total sum of the array : 15
+student@gbl:~/23bcs098/exe5$ ./sum
+Enter array size: 6
+Enter the array elements:
+1
+2
+3
+4
+5
+6
+Thread 1 local_sum: 6
+Thread 2 local_sum: 15
+Total sum of the array : 21
+
+
+[23bcs098@mepcolinux exe6]$cat 3.c
+#include <stdio.h>
+#include <pthread.h>
+void* greeting(void* arg) {
+    printf("Hello from child thread.\n");
+    pthread_exit(NULL);
+}
+int main() {
+    pthread_t t;
+    printf("Hello from main thread.\n");
+    pthread_create(&t, NULL, greeting, NULL);
+    pthread_join(t, NULL);
+    printf("Main thread finished execution.\n");
+    return 0;
+}
+student@gbl:~/23bcs098/exe5$ ./o3
+Hello from main thread.
+Hello from child thread.
+Main thread finished execution.
+
+[23bcs098@mepcolinux exe6]$exit
+exit
