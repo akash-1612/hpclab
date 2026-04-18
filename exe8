@@ -1,0 +1,90 @@
+[23bcs098@mepcolinux exe9]$cat pr1.c
+#include<stdio.h>
+#include<stdlib.h>
+#include<omp.h>
+#include<time.h>
+int main()
+{
+        int n;
+        printf("Enter the no of array elements:");
+        scanf("%d",&n);
+        int *a=(int*)malloc(n*sizeof(int));
+        int *b=(int*)malloc(n*sizeof(int));
+        int *c=(int*)malloc(n*sizeof(int));
+        for(int i=0;i<n;i++)
+        {
+                a[i]=rand()%10;
+                b[i]=rand()%10;
+        }
+        printf("Matrix A:\n");
+        for(int i=0;i<n;i++)
+        {
+                printf("%d ",a[i]);
+        }
+        printf("\nMatrix B:\n");
+        for(int i=0;i<n;i++)
+        {
+                printf("%d ",b[i]);
+        }
+#pragma omp parallel for
+        for(int i=0;i<n;i++)
+        {
+                c[i]=a[i]+b[i];
+        }
+        printf("\nsum of two large arrays:");
+        for(int i=0;i<n;i++)
+        {
+                printf("%d ",c[i]);
+        }
+}
+
+
+[23bcs098@mepcolinux exe9]$./pr1
+Enter the no of array elements:20
+Matrix A:
+3 7 3 6 9 2 0 3 0 2 1 7 2 2 7 9 2 9 3 1
+Matrix B:
+6 5 5 2 1 7 9 6 6 6 8 9 0 3 5 2 8 7 6 2
+sum of two large arrays:9 12 8 8 10 9 9 9 6 8 9 16 2 5 12 11 10 16 9 3 [23bcs098@mepcolinux exe9]$cat pr2.c
+#include<stdio.h>
+#include<stdlib.h>
+#include<omp.h>
+#include<time.h>
+int main()
+{
+        int n,c;
+        printf("Enter the no of array elements:");
+        scanf("%d",&n);
+        int *a=(int*)malloc(n*sizeof(int));
+        for(int i=0;i<n;i++)
+        {
+                a[i]=rand()%10;
+        }
+        printf("Array:\n");
+        for(int i=0;i<n;i++)
+        {
+                printf("%d ",a[i]);
+        }
+        printf("\nEnter the constant vaule added to the array:");
+        scanf("%d",&c);
+#pragma omp parallel for
+        for(int i=0;i<n;i++)
+        {
+                a[i]+=c;
+        }
+        printf("\nArray element after increment by c:\n");
+        for(int i=0;i<n;i++)
+        {
+                printf("%d ",a[i]);
+        }
+}
+
+[23bcs098@mepcolinux exe9]$./pr2
+Enter the no of array elements:20
+Array:
+3 6 7 5 3 5 6 2 9 1 2 7 0 9 3 6 0 6 2 6
+Enter the constant vaule added to the array:5
+
+Array element after increment by c:
+8 11 12 10 8 10 11 7 14 6 7 12 5 14 8 11 5 11 7 11 [23bcs098@mepcolinux exe9]$exit
+exit
