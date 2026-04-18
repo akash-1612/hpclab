@@ -1,0 +1,109 @@
+[23bcs098@mepcolinux exe2]$cat pr1.c
+#include<stdio.h>
+#include<mpi.h>
+int main()
+{
+        int rank,size;
+        MPI_Init(NULL,NULL);
+        MPI_Comm_size(MPI_COMM_WORLD,&size);
+        MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+        printf("Hello from rank: %d\n",rank);
+        return 0;
+}
+
+[23bcs098@mepcolinux exe2]$cat pr2.c
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <mpi.h>
+#define MAX 100
+int isPalindrome(char str[])
+{
+    int i = 0, j = strlen(str) - 1;
+    while (i < j)
+    {
+        if (str[i] != str[j])
+            return 0;
+        i++;
+        j--;
+    }
+    return 1;
+}
+void toUpperCase(char str[])
+{
+    for (int i = 0; str[i]; i++)
+        str[i] = toupper(str[i]);
+}
+int main(int argc, char *argv[])
+{
+    int rank, size;
+    char message[MAX];
+    char in[5][50]={"red","racecar","akash","red"};
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if (rank == 0)
+    {
+        MPI_Status status;
+
+        for (int i = 1; i < size; i++)
+        {
+            MPI_Recv(message, MAX, MPI_CHAR, MPI_ANY_SOURCE,
+                     MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+            int sender = status.MPI_SOURCE;
+            int type = status.MPI_TAG;
+
+            if (type == 1)
+            {
+                toUpperCase(message);
+                printf("From process %d (Type 1): Uppercase = %s\n",
+                       sender, message);
+            }
+            else if (type == 2)
+            {
+                if (isPalindrome(message))
+                    printf("From process %d (Type 2): %s is a Palindrome\n",
+                           sender, message);
+                else
+                    printf("From process %d (Type 2): %s is NOT a Palindrome\n",
+                           sender, message);
+            }
+        }
+    }
+    else
+    {
+            int k=0;
+        if (rank % 2 == 1)
+        {
+            strcpy(message,in[rank-1]);
+            MPI_Send(message, MAX, MPI_CHAR, 0, 1, MPI_COMM_WORLD);
+        }
+        else
+        {
+            strcpy(message,in[rank-1]);
+            MPI_Send(message, MAX, MPI_CHAR, 0, 2, MPI_COMM_WORLD);
+        }
+    }
+
+    MPI_Finalize();
+    return 0;
+}
+
+[23bcs098@mepcolinux exe2]$cat out.txt
+ada@ada:~$ mpiexec -n 4 ./a.out
+From process 1 (Type 1): Uppercase = RED
+From process 2 (Type 2): racecar is a Palindrome
+From process 3 (Type 1): Uppercase = AKASH
+ada@ada:~$ mpicc hello.c
+ada@ada:~$ mpiexec -n 4 ./a.out
+Hello from rank: 0
+Hello from rank: 1
+Hello from rank: 3
+Hello from rank: 2
+
+[23bcs098@mepcolinux exe2]$exit
+exit
+
+Script done on Tuesday 20 January 2026 12:31:06 PM IST
+[23bcs098@mepcolinux exe2]$
