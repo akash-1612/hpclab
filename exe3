@@ -1,0 +1,70 @@
+[23bcs098@mepcolinux exe4]$cat pr.txt
+#include<stdio.h>
+#include<stdlib.h>
+#include<mpi.h>
+int main(int argc,char *argv[])
+{
+        int rank,size,n=20;
+        int arr[n];
+        int *subarr;
+        int search,local_count=0,tot_count=0,local_n;
+        MPI_Init(&argc,&argv);
+        MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+        MPI_Comm_size(MPI_COMM_WORLD,&size);
+        local_n=n/size;
+        subarr=(int*)malloc(local_n*sizeof(int));
+        if(rank==0)
+        {
+                printf("Array elements:\n");
+                for(int i=0;i<n;i++)
+                {
+                        arr[i]=rand()%10;
+                        printf("%d\n",arr[i]);
+                }
+                printf("\nEnter the search element:");
+                fflush(stdout);
+                scanf("%d",&search);
+        }
+        MPI_Bcast(&search,1,MPI_INT,0,MPI_COMM_WORLD);
+        MPI_Scatter(arr,local_n,MPI_INT,subarr,local_n,MPI_INT,0,MPI_COMM_WORLD);
+        for(int i=0;i<local_n;i++)
+        {
+                if(subarr[i]==search)
+                        local_count++;
+        }
+        MPI_Reduce(&local_count,&tot_count,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
+        if(rank==0)
+        {
+                printf("Total Frequency %d : %d\n",search,tot_count);
+        }
+        MPI_Finalize();
+}
+
+gbl@gbl:~/23bcs098/exe3$ mpiexec -n 4 ./a.out
+Array elements:
+3
+6
+7
+5
+3
+5
+6
+2
+9
+1
+2
+7
+0
+9
+3
+6
+0
+6
+2
+6
+
+Enter the search element:6
+Total Frequency 6 : 5
+
+[23bcs098@mepcolinux exe4]$exit
+exit
