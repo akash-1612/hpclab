@@ -1,0 +1,111 @@
+[23bcs098@mepcolinux exe5]$cat pr1.c
+#include <mpi.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#define MAX_NAME_LEN 50
+#define MAX_STUDENTS 100
+typedef struct {
+    char Name[MAX_NAME_LEN];
+    int RollNo;
+    float TotalMarks;
+    char Grade;
+} Student;
+void calc_grade(Student* s) {
+    if (s->TotalMarks >= 90)
+        s->Grade = 'A';
+    else if (s->TotalMarks >= 80)
+        s->Grade = 'B';
+    else if (s->TotalMarks >= 70)
+        s->Grade = 'C';
+    else if (s->TotalMarks >= 60)
+        s->Grade = 'D';
+    else
+        s->Grade = 'F';
+}
+void create_mpi_student_type(MPI_Datatype* mpi_student_type) {
+    int block_lengths[4] = {MAX_NAME_LEN, 1, 1, 1};
+    MPI_Aint displacements[4];
+    displacements[0] = offsetof(Student, Name);
+    displacements[1] = offsetof(Student, RollNo);
+    displacements[2] = offsetof(Student, TotalMarks);
+    displacements[3] = offsetof(Student, Grade);
+    MPI_Datatype types[4] = {MPI_CHAR, MPI_INT, MPI_FLOAT, MPI_CHAR};
+    MPI_Type_create_struct(4, block_lengths, displacements, types, mpi_student_type);
+    MPI_Type_commit(mpi_student_type);
+}
+int main(int argc, char* argv[]) {
+    int rank, size, num_students = 0, i;
+    Student students[MAX_STUDENTS];
+    char input_filename[] = "students.txt";
+    char output_filename[] = "grades.txt";
+    MPI_Datatype mpi_student_type;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    create_mpi_student_type(&mpi_student_type);
+    int students_per_proc;
+    if (rank == 0) {
+        FILE* fin = fopen(input_filename, "r");
+        if (!fin) {
+            fprintf(stderr, "Error opening input file.\n");
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+        while (fscanf(fin, "%s %d %f", students[num_students].Name, &students[num_students].RollNo,
+                      &students[num_students].TotalMarks) == 3) {
+            students[num_students].Grade = '-';
+            num_students++;
+        }
+        fclose(fin);
+
+        if (num_students % size != 0) {
+            printf("Warning: Number of students not divisible by number of processes. Some processes may do extra work.\n");
+        }
+        students_per_proc = (num_students + size - 1) / size; // Ceiling division
+    }
+    MPI_Bcast(&num_students, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    students_per_proc = (num_students + size - 1) / size;
+    Student local_students[students_per_proc];
+    MPI_Scatter(students, students_per_proc, mpi_student_type, local_students, students_per_proc, mpi_student_type, 0, MPI_COMM_WORLD);
+    for (i = 0; i < students_per_proc; i++) {
+        int global_idx = rank * students_per_proc + i;
+        if (global_idx < num_students) {
+            calc_grade(&local_students[i]);
+        }
+    }
+    MPI_Gather(local_students, students_per_proc, mpi_student_type, students, students_per_proc, mpi_student_type, 0, MPI_COMM_WORLD);
+    if (rank == 0) {
+        FILE* fout = fopen(output_filename, "w");
+        if (!fout) {
+            fprintf(stderr, "Error opening output file.\n");
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+        for (i = 0; i < num_students; i++) {
+            fprintf(fout, "%s %d %.2f %c\n", students[i].Name, students[i].RollNo, students[i].TotalMarks, students[i].Grade);
+        }
+        fclose(fout);
+        printf("Grades written to %s\n", output_filename);
+    }
+    MPI_Type_free(&mpi_student_type);
+    MPI_Finalize();
+    return 0;
+}
+III-B1@gbl:~/23bcs098/exe4$ nvim grade.txt
+III-B1@gbl:~/23bcs098/exe4$ ls
+a.out  grade.txt  pr1.c  student.txt
+III-B1@gbl:~/23bcs098/exe4$ cat student.txt
+akash 98 92
+akilan 99 82
+arish 100 72
+bala 101 62
+
+III-B1@gbl:~/23bcs098/exe4$ mpicc pr1.c
+III-B1@gbl:~/23bcs098/exe4$ mpiexec -n 4 ./a.out
+Grades written to grade.txt
+III-B1@gbl:~/23bcs098/exe4$ cat grade.txt
+akash 98 92.00 A
+akilan 99 82.00 B
+arish 100 72.00 C
+bala 101 62.00 D
+[23bcs098@mepcolinux exe5]$exit
+exit
